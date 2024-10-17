@@ -141,7 +141,19 @@ mod MultiRewardStaking {
         }
 
         fn get_reward(ref self: ContractState, position_index: u256) {
+            let caller = get_caller_address();
 
+            assert!(position_index <= self.user_staking_positions.entry(caller).len().try_into().unwrap() - 1, "invalid position index");
+
+            for i in 0..self.reward_tokens.len() {
+                let reward_token = self.reward_tokens.at(i).read();
+                let reward = self.user_position_rewards.entry((caller, position_index, reward_token)).read();
+
+                if reward > 0 {
+                    self.user_position_rewards.entry((caller, position_index, reward_token)).write(0);
+                    IERC20Dispatcher { contract_address: reward_token }.transfer(caller, reward);
+                }
+            }
         }
 
         fn user_next_position_index(self: @ContractState, account: ContractAddress) -> u256 {
