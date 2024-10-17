@@ -114,7 +114,22 @@ mod MultiRewardStaking {
         }
 
         fn stake(ref self: ContractState, amount: u256) {
+            let caller = get_caller_address();
+            let this_address = get_contract_address();
+            let next_user_position = self.user_next_position_index(caller);
+            self.update_reward(caller, next_user_position);
 
+            assert!(amount > 0, "can't stake zero amount");
+
+            let transfer = IERC20Dispatcher { contract_address: self.staking_token.read() }.transfer_from(caller, this_address, amount);
+            assert!(transfer, "transfer failed");
+
+            let staking_position = StakingPosition {
+                balance: amount
+            };
+
+            self.user_staking_positions.entry(caller).append().write(staking_position);
+            self.total_stake.write(self.total_stake.read() + amount);
         }
 
         fn withdraw_token(ref self: ContractState, amount: u256, position_index: u256) {
