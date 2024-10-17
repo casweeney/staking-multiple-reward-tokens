@@ -1,4 +1,5 @@
 use starknet::ContractAddress;
+use staking_multiple_reward_tokens::multi_reward_staking::MultiRewardStaking::Reward;
 
 #[starknet::interface]
 pub trait IMultiRewardStaking<TContractState> {
@@ -13,4 +14,9 @@ pub trait IMultiRewardStaking<TContractState> {
     fn rewards_earned(self: @TContractState, account: ContractAddress, position_index: u256, rewards_token: ContractAddress) -> u256;
     fn get_reward(ref self: TContractState, position_index: u256);
     fn user_next_position_index(self: @TContractState, account: ContractAddress) -> u256;
+
+    fn staking_token(self: @TContractState) -> ContractAddress;
+    fn reward_data(self: @TContractState, reward_token: ContractAddress) -> Reward;
+    fn total_stake(self: @TContractState) -> u256;
+    fn owner(self: @TContractState) -> ContractAddress;
 }

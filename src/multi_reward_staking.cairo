@@ -1,5 +1,5 @@
 #[starknet::contract]
-mod MultiRewardStaking {
+pub mod MultiRewardStaking {
     use staking_multiple_reward_tokens::interfaces::imulti_reward_staking::IMultiRewardStaking;
     use staking_multiple_reward_tokens::interfaces::ierc20::{IERC20Dispatcher, IERC20DispatcherTrait};
     use starknet::{ContractAddress, get_block_timestamp, get_caller_address, get_contract_address, contract_address_const};
@@ -24,7 +24,7 @@ mod MultiRewardStaking {
     }
 
     #[derive(Copy, Drop, Serde, starknet::Store)]
-    struct Reward {
+    pub struct Reward {
         duration: u256,
         finish_at: u256,
         updated_at: u256,
@@ -33,7 +33,7 @@ mod MultiRewardStaking {
     }
 
     #[derive(Copy, Drop, Serde, starknet::Store)]
-    struct StakingPosition {
+    pub struct StakingPosition {
         balance: u256
     }
 
@@ -195,6 +195,22 @@ mod MultiRewardStaking {
 
         fn user_next_position_index(self: @ContractState, account: ContractAddress) -> u256 {
             self.user_staking_positions.entry(account).len().try_into().unwrap()
+        }
+
+        fn staking_token(self: @ContractState) -> ContractAddress {
+            self.staking_token.read()
+        }
+
+        fn reward_data(self: @ContractState, reward_token: ContractAddress) -> Reward {
+            self.reward_data.entry(reward_token).read()
+        }
+
+        fn total_stake(self: @ContractState) -> u256 {
+            self.total_stake.read()
+        }
+
+        fn owner(self: @ContractState) -> ContractAddress {
+            self.owner.read()
         }
     }
 
