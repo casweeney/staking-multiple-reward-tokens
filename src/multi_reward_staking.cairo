@@ -115,8 +115,9 @@ mod MultiRewardStaking {
         }
 
         fn last_time_reward_applicable(self: @ContractState, rewards_token: ContractAddress) -> u256 {
+            let block_timestamp: u256 = get_block_timestamp().try_into().unwrap();
 
-            9
+            self.min(block_timestamp, self.reward_data.entry(rewards_token).finish_at.read())
         }
 
         fn reward_per_token(self: @ContractState, rewards_token: ContractAddress) -> u256 {
