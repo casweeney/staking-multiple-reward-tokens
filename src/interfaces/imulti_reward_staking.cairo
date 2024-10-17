@@ -1,5 +1,5 @@
 use starknet::ContractAddress;
-use staking_multiple_reward_tokens::multi_reward_staking::MultiRewardStaking::{Reward, StakingPosition};
+use staking_multiple_reward_tokens::multi_reward_staking::MultiRewardStaking::Reward;
 
 #[starknet::interface]
 pub trait IMultiRewardStaking<TContractState> {
