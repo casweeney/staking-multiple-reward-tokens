@@ -121,13 +121,23 @@ mod MultiRewardStaking {
         }
 
         fn reward_per_token(self: @ContractState, rewards_token: ContractAddress) -> u256 {
-
-            9
+            if self.total_stake.read() == 0 {
+                self.reward_data.entry(rewards_token).reward_per_token_stored.read()
+            } else {
+                self.reward_data.entry(rewards_token).reward_per_token_stored.read() + (self.reward_data.entry(rewards_token).reward_rate.read() * (self.last_time_reward_applicable(rewards_token) - self.reward_data.entry(rewards_token).updated_at.read()) * ONE_E18) / self.total_stake.read()
+            }
         }
 
         fn rewards_earned(self: @ContractState, account: ContractAddress, position_index: u256, rewards_token: ContractAddress) -> u256 {
+            if self.user_staking_positions.entry(account).len() == 0 {
+                return 0;
+            }
 
-            9
+            if position_index <= self.user_staking_positions.entry(account).len().try_into().unwrap() - 1 {
+                ((self.user_staking_positions.entry(account).at(position_index.try_into().unwrap()).balance.read() * (self.reward_per_token(rewards_token) - self.user_reward_per_tokens.entry((account, position_index, rewards_token)).read())) / ONE_E18) + self.user_position_rewards.entry((account, position_index, rewards_token)).read()
+            } else {
+                return 0;
+            }
         }
 
         fn get_reward(ref self: ContractState, position_index: u256) {
@@ -135,8 +145,7 @@ mod MultiRewardStaking {
         }
 
         fn user_next_position_index(self: @ContractState, account: ContractAddress) -> u256 {
-
-            9
+            self.user_staking_positions.entry(account).len().try_into().unwrap()
         }
     }
 
