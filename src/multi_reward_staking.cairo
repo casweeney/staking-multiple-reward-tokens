@@ -79,6 +79,13 @@ mod MultiRewardStaking {
         }
 
         fn set_reward_amount(ref self: ContractState, rewards_token: ContractAddress, amount: u256) {
+            let caller = get_caller_address();
+            assert!(caller == self.owner.read(), "not authorized");
+
+            let zero_address = self.zero_address();
+
+            self.update_reward(zero_address, 0);
+
             assert!(self.reward_data.entry(rewards_token).duration.read() > 0, "reward duration = 0");
 
             let caller = get_caller_address();
@@ -143,6 +150,8 @@ mod MultiRewardStaking {
         fn get_reward(ref self: ContractState, position_index: u256) {
             let caller = get_caller_address();
 
+            self.update_reward(caller, position_index);
+
             assert!(position_index <= self.user_staking_positions.entry(caller).len().try_into().unwrap() - 1, "invalid position index");
 
             for i in 0..self.reward_tokens.len() {
@@ -164,7 +173,17 @@ mod MultiRewardStaking {
     #[generate_trait]
     impl InternalImpl of InternalTrait {
         fn update_reward(ref self: ContractState, account: ContractAddress, position_index: u256) {
+            for i in 0..self.reward_tokens.len() {
+                let token = self.reward_tokens.at(i).read();
 
+                self.reward_data.entry(token).reward_per_token_stored.write(self.reward_per_token(token));
+                self.reward_data.entry(token).updated_at.write(self.last_time_reward_applicable(token));
+
+                if account.is_non_zero() {
+                    self.user_position_rewards.entry((account, position_index, token)).write(self.rewards_earned(account, position_index, token));
+                    self.user_reward_per_tokens.entry((account, position_index, token)).write(self.reward_data.entry(token).reward_per_token_stored.read());
+                }
+            }
         }
 
         fn min(self: @ContractState, x: u256, y: u256) -> u256 {
