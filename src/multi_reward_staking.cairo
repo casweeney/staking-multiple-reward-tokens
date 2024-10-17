@@ -37,22 +37,73 @@ mod MultiRewardStaking {
         balance: u256
     }
 
+    #[constructor]
+    fn constructor(ref self: ContractState, owner: ContractAddress, staking_token: ContractAddress) {
+        self.owner.write(owner);
+        self.staking_token.write(staking_token);
+    }
+
     impl MultiRewardStakingImpl of IMultiRewardStaking<ContractState> {
         fn is_reward_token_added(self: @ContractState) -> bool {
 
-            false
+            let mut balance_sum = 0;
+            let mut greater_than_zero = false;
+
+            for index in 0..self.reward_tokens.len() {
+                let token_address = self.reward_tokens.at(index).read();
+
+                balance_sum = balance_sum + IERC20Dispatcher {contract_address: token_address}.balance_of(get_contract_address());
+            };
+
+            if balance_sum > 0 {
+                greater_than_zero = true;
+            }
+
+            greater_than_zero
         }
 
         fn add_reward(ref self: ContractState, rewards_token: ContractAddress, reward_duration: u256) {
+            assert!(self.reward_data.entry(rewards_token).duration.read() == 0, "already added");
+            assert!(reward_duration > 0, "duration can't be zero");
 
+            self.reward_tokens.append().write(rewards_token);
+            self.reward_data.entry(rewards_token).duration.write(reward_duration);
         }
 
         fn set_reward_duration(ref self: ContractState, rewards_token: ContractAddress, duration: u256) {
+            let block_timestamp: u256 = get_block_timestamp().try_into().unwrap();
+            assert!(block_timestamp > self.reward_data.entry(rewards_token).finish_at.read(), "reward period still active");
+            assert!(duration > 0, "duration can't be zero");
 
+            self.reward_data.entry(rewards_token).duration.write(duration);
         }
 
         fn set_reward_amount(ref self: ContractState, rewards_token: ContractAddress, amount: u256) {
+            assert!(self.reward_data.entry(rewards_token).duration.read() > 0, "reward duration = 0");
 
+            let caller = get_caller_address();
+            let this_contract = get_contract_address();
+
+            let transfer = IERC20Dispatcher { contract_address: rewards_token }.transfer_from(caller, this_contract, amount);
+            assert!(transfer, "transfer failed");
+
+            let block_timestamp: u256 = get_block_timestamp().try_into().unwrap();
+            if block_timestamp > self.reward_data.entry(rewards_token).finish_at.read() {
+                self.reward_data.entry(rewards_token).reward_rate.write(amount / self.reward_data.entry(rewards_token).duration.read());
+            } else {
+                let block_timestamp: u256 = get_block_timestamp().try_into().unwrap();
+
+                let remaining_rewards = self.reward_data.entry(rewards_token).reward_rate.read() * (self.reward_data.entry(rewards_token).finish_at.read() - block_timestamp);
+
+                self.reward_data.entry(rewards_token).reward_rate.write((remaining_rewards + amount) / self.reward_data.entry(rewards_token).duration.read())
+            }
+
+            assert!(self.reward_data.entry(rewards_token).reward_rate.read() > 0, "reward rate = 0");
+            assert!(self.reward_data.entry(rewards_token).reward_rate.read() * self.reward_data.entry(rewards_token).duration.read() <= IERC20Dispatcher{contract_address: rewards_token}.balance_of(get_contract_address()), "insufficient reward token");
+
+            let block_timestamp: u256 = get_block_timestamp().try_into().unwrap();
+            self.reward_data.entry(rewards_token).finish_at.write(block_timestamp + self.reward_data.entry(rewards_token).duration.read());
+            self.reward_data.entry(rewards_token).updated_at.write(block_timestamp)
         }
 
         fn stake(ref self: ContractState, amount: u256) {
