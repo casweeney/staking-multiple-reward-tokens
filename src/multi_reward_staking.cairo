@@ -133,7 +133,20 @@ mod MultiRewardStaking {
         }
 
         fn withdraw_token(ref self: ContractState, amount: u256, position_index: u256) {
+            let caller = get_caller_address();
 
+            self.update_reward(caller, position_index);
+
+            assert!(position_index <= self.user_staking_positions.entry(caller).len().try_into().unwrap() - 1, "invalid position index");
+            assert!(amount > 0, "can't withdraw zero amount");
+
+            let prev_balance = self.user_staking_positions.entry(caller).at(position_index.try_into().unwrap()).balance.read();
+            self.user_staking_positions.entry(caller).at(position_index.try_into().unwrap()).balance.write(prev_balance - amount);
+
+            let prev_total_stake = self.total_stake.read();
+            self.total_stake.write(prev_total_stake - amount);
+
+            IERC20Dispatcher { contract_address: self.staking_token.read() }.transfer(caller, amount);
         }
 
         fn last_time_reward_applicable(self: @ContractState, rewards_token: ContractAddress) -> u256 {
