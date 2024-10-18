@@ -1,0 +1,22 @@
+{
+  "name": "staking_multiple_reward_tokens",
+  "version": "1.0.0",
+  "description": "This is a modified Synthetix staking implementation that uses more than one ERC20 token as reward tokens.",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "deploy": "ts-node scripts/deploy.ts",
+    "deploy-r-t1": "ts-node scripts/deployRewardToken1.ts",
+    "deploy-r-t2": "ts-node scripts/deployRewardToken2.ts",
+    "deploy-s-t": "ts-node scripts/deployStakingToken.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "starknet": "^6.11.0"
+  }
+}
