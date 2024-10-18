@@ -19,17 +19,18 @@ pub mod MultiRewardStaking {
         user_staking_positions: Map<ContractAddress, Vec<StakingPosition>>,
         user_position_rewards: Map<(ContractAddress, u256, ContractAddress), u256>,
         user_reward_per_tokens: Map<(ContractAddress, u256, ContractAddress), u256>,
+        reward_token_exist: Map<ContractAddress, bool>,
         total_stake: u256,
         owner: ContractAddress,
     }
 
     #[derive(Copy, Drop, Serde, starknet::Store)]
     pub struct Reward {
-        duration: u256,
-        finish_at: u256,
-        updated_at: u256,
-        reward_rate: u256,
-        reward_per_token_stored: u256
+        pub duration: u256,
+        pub finish_at: u256,
+        pub updated_at: u256,
+        pub reward_rate: u256,
+        pub reward_per_token_stored: u256
     }
 
     #[derive(Copy, Drop, Serde, starknet::Store)]
@@ -43,8 +44,9 @@ pub mod MultiRewardStaking {
         self.staking_token.write(staking_token);
     }
 
+    #[abi(embed_v0)]
     impl MultiRewardStakingImpl of IMultiRewardStaking<ContractState> {
-        fn is_reward_token_added(self: @ContractState) -> bool {
+        fn is_reward_added(self: @ContractState) -> bool {
 
             let mut balance_sum = 0;
             let mut greater_than_zero = false;
@@ -62,18 +64,25 @@ pub mod MultiRewardStaking {
             greater_than_zero
         }
 
-        fn add_reward(ref self: ContractState, rewards_token: ContractAddress, reward_duration: u256) {
+        fn add_reward_token(ref self: ContractState, rewards_token: ContractAddress) {
+            let caller = get_caller_address();
+            assert!(caller == self.owner.read(), "not authorized");
+
+            assert!(self.reward_token_exist.entry(rewards_token).read() == false, "token already exist");
             assert!(self.reward_data.entry(rewards_token).duration.read() == 0, "already added");
-            assert!(reward_duration > 0, "duration can't be zero");
 
             self.reward_tokens.append().write(rewards_token);
-            self.reward_data.entry(rewards_token).duration.write(reward_duration);
+            self.reward_token_exist.entry(rewards_token).write(true);
         }
 
         fn set_reward_duration(ref self: ContractState, rewards_token: ContractAddress, duration: u256) {
+            let caller = get_caller_address();
+            assert!(caller == self.owner.read(), "not authorized");
+
+            assert!(self.reward_token_exist.entry(rewards_token).read() == true, "token not added");
+            
             let block_timestamp: u256 = get_block_timestamp().try_into().unwrap();
-            assert!(block_timestamp > self.reward_data.entry(rewards_token).finish_at.read(), "reward period still active");
-            assert!(duration > 0, "duration can't be zero");
+            assert!(self.reward_data.entry(rewards_token).finish_at.read() < block_timestamp, "reward duration not finished");
 
             self.reward_data.entry(rewards_token).duration.write(duration);
         }
@@ -211,6 +220,10 @@ pub mod MultiRewardStaking {
 
         fn owner(self: @ContractState) -> ContractAddress {
             self.owner.read()
+        }
+
+        fn reward_tokens_count(self: @ContractState) -> u256 {
+            self.reward_tokens.len().try_into().unwrap()
         }
     }
 
