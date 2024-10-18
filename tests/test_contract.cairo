@@ -251,7 +251,7 @@ fn test_stake() {
 }
 
 #[test]
-fn test_earned() {
+fn test_rewards_earned() {
     let staking_token_address = deploy_token_contract("StakingToken");
     let staking_contract_address = deploy_staking_contract("MultiRewardStaking", staking_token_address);
     let owner: ContractAddress = starknet::contract_address_const::<0x123626789>();
