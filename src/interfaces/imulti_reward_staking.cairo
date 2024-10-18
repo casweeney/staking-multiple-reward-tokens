@@ -3,8 +3,8 @@ use staking_multiple_reward_tokens::multi_reward_staking::MultiRewardStaking::Re
 
 #[starknet::interface]
 pub trait IMultiRewardStaking<TContractState> {
-    fn is_reward_token_added(self: @TContractState) -> bool;
-    fn add_reward(ref self: TContractState, rewards_token: ContractAddress, reward_duration: u256);
+    fn is_reward_added(self: @TContractState) -> bool;
+    fn add_reward_token(ref self: TContractState, rewards_token: ContractAddress);
     fn set_reward_duration(ref self: TContractState, rewards_token: ContractAddress, duration: u256);
     fn set_reward_amount(ref self: TContractState, rewards_token: ContractAddress, amount: u256);
     fn stake(ref self: TContractState, amount: u256);
@@ -19,4 +19,5 @@ pub trait IMultiRewardStaking<TContractState> {
     fn reward_data(self: @TContractState, reward_token: ContractAddress) -> Reward;
     fn total_stake(self: @TContractState) -> u256;
     fn owner(self: @TContractState) -> ContractAddress;
+    fn reward_tokens_count(self: @TContractState) -> u256;
 }
